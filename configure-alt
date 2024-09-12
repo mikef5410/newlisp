@@ -31,7 +31,7 @@ OS2_CC="${DEFAULT_CC}"
 
 DEFAULT_CFLAGS=" -Wall -Wno-uninitialized -fno-strict-aliasing -O2 -c"
 DARWIN_CFLAGS=" -Wall -Wno-long-long -Wno-strict-aliasing -O2 -c"
-LINUX_CFLAGS=" -Wall -Wno-long-long -Wno-strict-aliasing -O2 -c"
+LINUX_CFLAGS=" -Wall -Wno-long-long -Wno-strict-aliasing -O2 -c $(pkg-config --cflags libffi) $(pkg-config --cflags readline) "
 BSD_CFLAGS=" -Wall -Wno-uninitialized -Wno-long-long -fno-strict-aliasing -O2 -c"
 SUNOS_CFLAGS=" -Wall -pedantic -Wno-uninitialized -Wno-long-long -fno-strict-aliasing -O2 -c"
 AIX_XLCFLAGS=" -O2 -c"
@@ -42,7 +42,7 @@ OS2_CFLAGS=" -Wall -pedantic -Wno-uninitialized -Wno-long-long -Wno-strict-alias
 
 DEFAULT_LDFLAGS="-lm"
 DARWIN_LDFLAGS="${DEFAULT_LDFLAGS}"
-LINUX_LDFLAGS="-lm -ldl"
+LINUX_LDFLAGS="-lm -ldl $(pkg-config --libs libffi) $(pkg-config --libs readline) "
 BSD_LDFLAGS="${DEFAULT_LDFLAGS}"
 SUNOS_LDFLAGS="-lm -ldl -lrt -lsocket -lnsl"
 AIX_LDFLAGS="-lm -ldl -lrt -lnsl"
@@ -114,6 +114,8 @@ elif [ ${os_type} = OS2 ] ; then
 	DEFAULT_TARG="${OS2_TARG}"
 	true ${enable_readline:=yes};
 fi
+
+
 
 # Only LP64 and ILP32 memory models are officially supported, but we'll try to
 # support the others too.
@@ -205,7 +207,7 @@ for cclibreadline in "-lreadline" "-lreadline -lncurses" "-lreadline -ltermcap" 
 done
 true ${enable_readline:=no};
 rm -f test-readline*
-
+set -x
 # If we can't compile with ffi, and the environment variables don't
 # specify otherwise, we will disable it.
 cat > test-ffi.c <<EOF
@@ -238,7 +240,7 @@ int main(int argc, char** argv) {
 }
 EOF
 for cclibffi in "-lffi"; do
-	if ${CC:-${DEFAULT_CC}} test-ffi.c ${DEFAULT_LDFLAGS} ${cclibffi} -o test-ffi 2>/dev/null ; then
+	if ${CC:-${DEFAULT_CC}} -fpermissive test-ffi.c ${DEFAULT_LDFLAGS} ${cclibffi} -o test-ffi  ; then
 		true ${enable_ffi:=yes};
 		DEFAULT_FFIFLAGS="${cclibffi}";
 		echo "Detected ffi flags: ${cclibffi}";
@@ -247,7 +249,7 @@ for cclibffi in "-lffi"; do
 done
 true ${enable_ffi:=no};
 rm -f test-ffi*
-
+set +x
 # Safe defaults; 
 true ${enable_utf8:=yes};
 
